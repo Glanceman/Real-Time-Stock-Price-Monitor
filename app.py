@@ -120,8 +120,9 @@ def create_price_figure(data: pd.DataFrame, ticker: str):
     
     return fig
 
+
 @st.fragment(run_every=interval_second)
-def show_chart(ticker):
+def update_data(ticker:str):
     global today
     if today.date() !=dt.datetime.today().date():
         today = dt.datetime.today()
@@ -137,37 +138,53 @@ def show_chart(ticker):
     # Calculate indicators
     data_with_indicators = calculate_indicators(data)
     print(data_with_indicators[-2:])
-    st.session_state.lastet_data_indicators = data_with_indicators.tail(1);
-
-    if st.session_state.price_fig==None :
-        st.session_state.price_fig = create_price_figure(data_with_indicators, ticker)
-    else:
-        with st.session_state.price_fig.batch_update():
-            st.session_state.price_fig.data[0].close = data_with_indicators['Close'][:]
-            st.session_state.price_fig.data[0].high = data_with_indicators['High'][:]
-            st.session_state.price_fig.data[0].low = data_with_indicators['Low'][:]
-            st.session_state.price_fig.data[0].open = data_with_indicators['Open'][:]
-            st.session_state.price_fig.data[0].x = data_with_indicators['date'][:]
-
-            st.session_state.price_fig.data[1].y = data_with_indicators['EMA10'][:]
-            st.session_state.price_fig.data[1].x = data_with_indicators['date'][:]
-
-            st.session_state.price_fig.data[2].y = data_with_indicators['bollh'][:]
-            st.session_state.price_fig.data[2].x = data_with_indicators['date'][:]
-
-            st.session_state.price_fig.data[3].y = data_with_indicators['bolll'][:]
-            st.session_state.price_fig.data[3].x = data_with_indicators['date'][:]
-
-    if st.session_state.rsi_fig == None:
-        st.session_state.rsi_fig = create_rsi_figure(data_with_indicators)
-    else:
-        with st.session_state.rsi_fig.batch_update():
-            st.session_state.rsi_fig.data[0].y = data_with_indicators['rsi'][:]
+    st.session_state.lastet_data_indicators = data_with_indicators;
 
 
+@st.fragment(run_every=interval_second)
+def show_price_chart(ticker):
     
-    st.plotly_chart(st.session_state.price_fig, use_container_width=True)
+    if 'lastet_data_indicators' in st.session_state:
+        data = st.session_state.lastet_data_indicators
+
+        if st.session_state.price_fig==None :
+            st.session_state.price_fig = create_price_figure(data, ticker)
+        else:
+            with st.session_state.price_fig.batch_update():
+                st.session_state.price_fig.data[0].close = data['Close'][:]
+                st.session_state.price_fig.data[0].high = data['High'][:]
+                st.session_state.price_fig.data[0].low = data['Low'][:]
+                st.session_state.price_fig.data[0].open = data['Open'][:]
+                st.session_state.price_fig.data[0].x = data['date'][:]
+
+                st.session_state.price_fig.data[1].y = data['EMA10'][:]
+                st.session_state.price_fig.data[1].x = data['date'][:]
+
+                st.session_state.price_fig.data[2].y = data['bollh'][:]
+                st.session_state.price_fig.data[2].x = data['date'][:]
+
+                st.session_state.price_fig.data[3].y = data['bolll'][:]
+                st.session_state.price_fig.data[3].x = data['date'][:]
+
+        st.plotly_chart(st.session_state.price_fig, use_container_width=True)
+
+@st.fragment(run_every=interval_second)
+def show_rsi_chart():
+
+    if 'lastet_data_indicators' in st.session_state:
+        data = st.session_state.lastet_data_indicators
+
+        if st.session_state.rsi_fig == None:
+            st.session_state.rsi_fig = create_rsi_figure(data)
+        else:
+            with st.session_state.rsi_fig.batch_update():
+                st.session_state.rsi_fig.data[0].y = data['rsi'][:]
+
+
     st.plotly_chart(st.session_state.rsi_fig, use_container_width=True)
+
+@st.fragment(run_every=interval_second)
+def show_detail():
     #show_price_chart(ticker=ticker,price_container=price_container)
     #st.line_chart(data=data, x='date', y=['rsi'])
     st.write(f"""
@@ -176,7 +193,7 @@ def show_chart(ticker):
     Recent Data:
     """)
     print(st.session_state.lastet_data_indicators)
-    st.dataframe(st.session_state.lastet_data_indicators)
+    st.dataframe(st.session_state.lastet_data_indicators[-2:])
 
 
 def main() -> None:
@@ -195,8 +212,10 @@ def main() -> None:
         old_data = fetch_old_data(ticker)
         st.session_state.data = old_data
 
-
-    show_chart(ticker)
+    update_data(ticker)
+    show_price_chart(ticker)
+    show_rsi_chart()
+    show_detail()
 
 
 
