@@ -24,6 +24,7 @@ def fetch_old_data(ticker: str) -> pd.DataFrame:
     yesterday_date = today - dt.timedelta(hours=8)
     yesterday_date_str = yesterday_date.strftime('%Y-%m-%d')
     data = yf.download(ticker, start="2024-01-01", end=yesterday_date_str, prepost=False)
+    data = data.droplevel('Ticker',axis=1)
     data.index = pd.to_datetime(data.index)
     data['date'] = data.index.date
     return data
@@ -135,6 +136,7 @@ def show_chart(ticker):
     
     # Calculate indicators
     data_with_indicators = calculate_indicators(data)
+    print(data_with_indicators[-2:])
     st.session_state.lastet_data_indicators = data_with_indicators.tail(1);
 
     if st.session_state.price_fig==None :
