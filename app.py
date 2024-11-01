@@ -16,7 +16,7 @@ if project_root not in sys.path:
 
 
 today = dt.datetime.today()
-print(today.date())
+
 interval_second = 30
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
@@ -200,6 +200,7 @@ def main() -> None:
 
 if __name__ == '__main__':
     # Initialize session state
+    print(today.date())
     if 'data' not in st.session_state:
         st.session_state.data = None
     if 'price_fig' not in st.session_state:
