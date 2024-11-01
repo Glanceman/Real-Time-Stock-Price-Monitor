@@ -16,8 +16,8 @@ if project_root not in sys.path:
 
 
 today = dt.datetime.today()
-
-interval_second = 30
+st.session_state.refresh_speed = None
+interval_second = None
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_old_data(ticker: str) -> pd.DataFrame:
@@ -121,85 +121,36 @@ def create_price_figure(data: pd.DataFrame, ticker: str):
     return fig
 
 
-@st.fragment(run_every=interval_second)
-def update_data(ticker:str):
-    global today
-    if today.date() !=dt.datetime.today().date():
-        today = dt.datetime.today()
-        st.rerun()
-
-    latest_data = fetch_latest_data(ticker)
-    # # Combine old and new data
-    data = pd.concat([
-        st.session_state.data[['date', 'Open', 'High', 'Low', 'Close']],
-        latest_data[['date', 'Open', 'High', 'Low', 'Close']]
-    ], ignore_index=True)
-    
-    # Calculate indicators
-    data_with_indicators = calculate_indicators(data)
-    print(data_with_indicators[-2:])
-    st.session_state.lastet_data_indicators = data_with_indicators;
-
-
-@st.fragment(run_every=interval_second)
-def show_price_chart(ticker):
-    
-    if 'lastet_data_indicators' in st.session_state:
-        data = st.session_state.lastet_data_indicators
-
-        if st.session_state.price_fig==None :
-            st.session_state.price_fig = create_price_figure(data, ticker)
-        else:
-            with st.session_state.price_fig.batch_update():
-                st.session_state.price_fig.data[0].close = data['Close'][:]
-                st.session_state.price_fig.data[0].high = data['High'][:]
-                st.session_state.price_fig.data[0].low = data['Low'][:]
-                st.session_state.price_fig.data[0].open = data['Open'][:]
-                st.session_state.price_fig.data[0].x = data['date'][:]
-
-                st.session_state.price_fig.data[1].y = data['EMA10'][:]
-                st.session_state.price_fig.data[1].x = data['date'][:]
-
-                st.session_state.price_fig.data[2].y = data['bollh'][:]
-                st.session_state.price_fig.data[2].x = data['date'][:]
-
-                st.session_state.price_fig.data[3].y = data['bolll'][:]
-                st.session_state.price_fig.data[3].x = data['date'][:]
-
-        st.plotly_chart(st.session_state.price_fig, use_container_width=True)
-
-@st.fragment(run_every=interval_second)
-def show_rsi_chart():
-
-    if 'lastet_data_indicators' in st.session_state:
-        data = st.session_state.lastet_data_indicators
-
-        if st.session_state.rsi_fig == None:
-            st.session_state.rsi_fig = create_rsi_figure(data)
-        else:
-            with st.session_state.rsi_fig.batch_update():
-                st.session_state.rsi_fig.data[0].y = data['rsi'][:]
-
-
-    st.plotly_chart(st.session_state.rsi_fig, use_container_width=True)
-
-@st.fragment(run_every=interval_second)
-def show_detail():
-    #show_price_chart(ticker=ticker,price_container=price_container)
-    #st.line_chart(data=data, x='date', y=['rsi'])
-    st.write(f"""
-    Latest Price: {st.session_state.lastet_data_indicators['Close'].iloc[-1]:.2f}
-    
-    Recent Data:
-    """)
-    print(st.session_state.lastet_data_indicators)
-    st.dataframe(st.session_state.lastet_data_indicators[-2:])
 
 
 def main() -> None:
     st.title("Real Time Stock Price")
-    ticker = st.text_input(label='Ticker', value="MSFT")
-    
+
+    col1 , col2 = st.columns(2)
+    with col1:
+        ticker = st.text_input(label='Ticker', value="MSFT", label_visibility='collapsed')
+    with col2:
+        st.button("search")
+
+    speed = st.select_slider(
+        "Select a speed for refresh",
+        options=[
+            "Never",
+            "Slow",
+            "Medium",
+            "Fast"
+        ],
+    )
+
+    if speed =='Never':
+        st.session_state.refresh_speed = None
+    elif speed =='Slow':
+        st.session_state.refresh_speed = 60
+    elif speed =='Medium':
+        st.session_state.refresh_speed = 20
+    elif speed =='Fast':
+        st.session_state.refresh_speed = 5
+
     # Reset session state if ticker changes
     if st.session_state.last_ticker != ticker:
         st.session_state.data = None
@@ -212,10 +163,86 @@ def main() -> None:
         old_data = fetch_old_data(ticker)
         st.session_state.data = old_data
 
+    @st.fragment(run_every=st.session_state.refresh_speed)
+    def update_data(ticker:str):
+        global today
+        if today.date() !=dt.datetime.today().date():
+            today = dt.datetime.today()
+            st.rerun()
+
+        latest_data = fetch_latest_data(ticker)
+        # # Combine old and new data
+        data = pd.concat([
+            st.session_state.data[['date', 'Open', 'High', 'Low', 'Close']],
+            latest_data[['date', 'Open', 'High', 'Low', 'Close']]
+        ], ignore_index=True)
+        
+        # Calculate indicators
+        data_with_indicators = calculate_indicators(data)
+        print(data_with_indicators[-2:])
+        st.session_state.lastet_data_indicators = data_with_indicators;
+
+
+    @st.fragment(run_every=st.session_state.refresh_speed)
+    def show_price_chart(ticker):
+        
+        if 'lastet_data_indicators' in st.session_state:
+            data = st.session_state.lastet_data_indicators
+
+            if st.session_state.price_fig==None :
+                st.session_state.price_fig = create_price_figure(data, ticker)
+            else:
+                with st.session_state.price_fig.batch_update():
+                    st.session_state.price_fig.data[0].close = data['Close'][:]
+                    st.session_state.price_fig.data[0].high = data['High'][:]
+                    st.session_state.price_fig.data[0].low = data['Low'][:]
+                    st.session_state.price_fig.data[0].open = data['Open'][:]
+                    st.session_state.price_fig.data[0].x = data['date'][:]
+
+                    st.session_state.price_fig.data[1].y = data['EMA10'][:]
+                    st.session_state.price_fig.data[1].x = data['date'][:]
+
+                    st.session_state.price_fig.data[2].y = data['bollh'][:]
+                    st.session_state.price_fig.data[2].x = data['date'][:]
+
+                    st.session_state.price_fig.data[3].y = data['bolll'][:]
+                    st.session_state.price_fig.data[3].x = data['date'][:]
+
+            st.plotly_chart(st.session_state.price_fig, use_container_width=True)
+
+    @st.fragment(run_every=st.session_state.refresh_speed)
+    def show_rsi_chart():
+
+        if 'lastet_data_indicators' in st.session_state:
+            data = st.session_state.lastet_data_indicators
+
+            if st.session_state.rsi_fig == None:
+                st.session_state.rsi_fig = create_rsi_figure(data)
+            else:
+                with st.session_state.rsi_fig.batch_update():
+                    st.session_state.rsi_fig.data[0].y = data['rsi'][:]
+
+
+        st.plotly_chart(st.session_state.rsi_fig, use_container_width=True)
+
+    @st.fragment(run_every=st.session_state.refresh_speed)
+    def show_detail():
+        #show_price_chart(ticker=ticker,price_container=price_container)
+        #st.line_chart(data=data, x='date', y=['rsi'])
+        st.write(f"""
+        Latest Price: {st.session_state.lastet_data_indicators['Close'].iloc[-1]:.2f}
+        
+        Recent Data:
+        """)
+        print(st.session_state.lastet_data_indicators)
+        st.dataframe(st.session_state.lastet_data_indicators[-2:])
+
     update_data(ticker)
     show_price_chart(ticker)
     show_rsi_chart()
     show_detail()
+    print(st.session_state.refresh_speed)
+
 
 
 
