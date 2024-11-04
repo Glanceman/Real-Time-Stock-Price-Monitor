@@ -24,7 +24,11 @@ def fetch_old_data(ticker: str) -> pd.DataFrame:
     yesterday_date = today - dt.timedelta(hours=8)
     yesterday_date_str = yesterday_date.strftime('%Y-%m-%d')
     data = yf.download(ticker, start="2024-01-01", end=yesterday_date_str, prepost=False)
-    data = data.droplevel('Ticker',axis=1)
+    try:
+        data = data.droplevel('Ticker', axis=1)
+    except:
+        print("No Ticker level")
+        
     data.index = pd.to_datetime(data.index)
     data['date'] = data.index.date
     return data
