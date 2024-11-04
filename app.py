@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import ta.momentum
 import ta.trend
 import ta.volatility
+import ta.volume
 import yfinance as yf
 import datetime as dt
 import ta
@@ -28,7 +29,7 @@ def fetch_old_data(ticker: str) -> pd.DataFrame:
         data = data.droplevel('Ticker', axis=1)
     except:
         print("No Ticker level")
-        
+
     data.index = pd.to_datetime(data.index)
     data['date'] = data.index.date
     return data
@@ -45,6 +46,7 @@ def calculate_indicators(data: pd.DataFrame) -> pd.DataFrame:
     boll = ta.volatility.BollingerBands(data['Close'])
     data['bollh'] = boll.bollinger_hband()
     data['bolll'] = boll.bollinger_lband()
+    #ta.volume.on_balance_volume(data['Close'],data['Volume'])
     return data
 
 def create_rsi_figure(data: pd.DataFrame):
@@ -177,8 +179,8 @@ def main() -> None:
         latest_data = fetch_latest_data(ticker)
         # # Combine old and new data
         data = pd.concat([
-            st.session_state.data[['date', 'Open', 'High', 'Low', 'Close']],
-            latest_data[['date', 'Open', 'High', 'Low', 'Close']]
+            st.session_state.data[['date', 'Open', 'High', 'Low', 'Close',"Volume"]],
+            latest_data[['date', 'Open', 'High', 'Low', 'Close',"Volume"]]
         ], ignore_index=True)
         
         # Calculate indicators

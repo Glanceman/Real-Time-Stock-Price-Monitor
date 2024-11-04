@@ -65,6 +65,29 @@
     \end{split}
 ```
 
+## On-Balance Volume(OBV)
+
+Indicates whether this volume is flowing in or out of a given security or currency pair
+
+```math
+\begin{split}
+    \text{OBV} &=\text{OBV}_\text{prev}+ 
+    \begin{cases}
+    & \text{volume },\text{if } \text{close} > \text{close}_\text{prev} \\
+    & 0, \text{if } \text{close} = \text{close}_\text{prev} \\
+    & -\text{volume }, \text{if } \text{close} < \text{close}_\text{prev}
+    \end{cases}
+\end{split} \\
+
+\begin{split}\
+    \text{where:}\\
+    \text{OBV} &= \text{Current on-balance volume level}\\
+    \text{OBV}_\text{prev} &= \text{Previous on-balance volume level}\\
+    \text{volume} &= \text{Latest Trading volume amount}\\
+\end{split}
+
+```
+
 ## Annualizing votaility
 ```math
 \begin{align}
