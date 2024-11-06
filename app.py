@@ -44,8 +44,10 @@ def fetch_old_data(ticker: str, timezone:str) -> pd.DataFrame:
 
 def fetch_latest_data(ticker: str) -> pd.DataFrame:
     stock = yf.Ticker(ticker)
-    latest_data = stock.history(interval='1m', period='1d', prepost=True)[-1:]
-    latest_data['date'] = latest_data.index.date
+    data = stock.history(interval='1m', period='1d', prepost=True)[-1:]
+    data.index = pd.to_datetime(data.index)
+    data['date'] = data.index.date
+    latest_data = data[-1:]
     return latest_data
 
 def calculate_indicators(data: pd.DataFrame) -> pd.DataFrame:
@@ -148,7 +150,10 @@ def main() -> None:
 
     # get the timezone
     temp_df = yf.download(tickers=ticker,period="1d",interval="1h",ignore_tz=False);
-    ticker_timezone = temp_df.index.tz.zone
+    if temp_df.index.tz==dt.timezone.utc:
+        ticker_timezone='UTC'
+    else:
+        ticker_timezone = temp_df.index.tz.zone
 
 
     speed = st.select_slider(
