@@ -9,6 +9,8 @@ import ta.volatility
 import ta.volume
 import yfinance as yf
 import datetime as dt
+from dateutil.relativedelta import relativedelta
+from zoneinfo import ZoneInfo
 import ta
 
 project_root = str(Path(__file__).resolve().parent)
@@ -16,15 +18,21 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-today = dt.datetime.today()
+today = dt.datetime.now(dt.timezone.utc)
 st.session_state.refresh_speed = None
-interval_second = None
+ticker_timezone = dt.timezone.utc
+
+
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def fetch_old_data(ticker: str) -> pd.DataFrame:
-    yesterday_date = today - dt.timedelta(hours=8)
-    yesterday_date_str = yesterday_date.strftime('%Y-%m-%d')
-    data = yf.download(ticker, start="2024-01-01", end=yesterday_date_str, prepost=False)
+def fetch_old_data(ticker: str, timezone:str) -> pd.DataFrame:
+    tz = ZoneInfo(timezone)
+    ticker_today = today.astimezone(tz)
+    
+    yesterday_date =  ticker_today - relativedelta(hours=8)
+
+    year_before_date =  ticker_today - relativedelta(years=1)
+    data = yf.download(ticker, start=year_before_date, end=yesterday_date, prepost=False,ignore_tz=False)
     try:
         data = data.droplevel('Ticker', axis=1)
     except:
@@ -138,6 +146,11 @@ def main() -> None:
     with col2:
         st.button("search")
 
+    # get the timezone
+    temp_df = yf.download(tickers=ticker,period="1d",interval="1h",ignore_tz=False);
+    ticker_timezone = temp_df.index.tz.zone
+
+
     speed = st.select_slider(
         "Select a speed for refresh",
         options=[
@@ -166,7 +179,7 @@ def main() -> None:
     
     # Initial data load
     if st.session_state.data is None:
-        old_data = fetch_old_data(ticker)
+        old_data = fetch_old_data(ticker,ticker_timezone)
         st.session_state.data = old_data
 
     @st.fragment(run_every=st.session_state.refresh_speed)
@@ -254,7 +267,9 @@ def main() -> None:
 
 if __name__ == '__main__':
     # Initialize session state
-    print(today.date())
+    print("time zone UTC")
+    print(today)
+
     if 'data' not in st.session_state:
         st.session_state.data = None
     if 'price_fig' not in st.session_state:
