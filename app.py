@@ -24,7 +24,7 @@ ticker_timezone = dt.timezone.utc
 
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=1800)  # Cache for 0.5 hour
 def fetch_old_data(ticker: str, timezone:str) -> pd.DataFrame:
     tz = ZoneInfo(timezone)
     ticker_today = today.astimezone(tz)
@@ -141,6 +141,8 @@ def create_price_figure(data: pd.DataFrame, ticker: str):
 
 def main() -> None:
     st.title("Real Time Stock Price")
+
+    st.write(f'Date: {today.date().strftime("%Y-%m-%d")}')
 
     col1 , col2 = st.columns(2)
     with col1:
