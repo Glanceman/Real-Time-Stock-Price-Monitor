@@ -44,7 +44,7 @@ def fetch_old_data(ticker: str, timezone:str) -> pd.DataFrame:
 
 def fetch_latest_data(ticker: str) -> pd.DataFrame:
     stock = yf.Ticker(ticker)
-    data = stock.history(interval='1m', period='1d', prepost=True)[-1:]
+    data = stock.history(interval='1m', period='2d', prepost=True)[-1:]
     data.index = pd.to_datetime(data.index)
     data['date'] = data.index.date
     latest_data = data[-1:]
