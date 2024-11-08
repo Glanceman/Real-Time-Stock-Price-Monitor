@@ -44,7 +44,7 @@ def fetch_old_data(ticker: str, timezone:str) -> pd.DataFrame:
 
 def fetch_latest_data(ticker: str) -> pd.DataFrame:
     stock = yf.Ticker(ticker)
-    data = stock.history(interval='1m', period='2d', prepost=True)[-1:]
+    data = stock.history(interval='1m', period='5d', prepost=True)[-1:]
     data.index = pd.to_datetime(data.index)
     data['date'] = data.index.date
     latest_data = data[-1:]
@@ -267,15 +267,14 @@ def main() -> None:
     show_price_chart(ticker)
     show_rsi_chart()
     show_detail()
-    print(st.session_state.refresh_speed)
+    print(f"refresh speed{st.session_state.refresh_speed}")
 
 
 
 
 if __name__ == '__main__':
     # Initialize session state
-    print("time zone UTC")
-    print(today)
+    print(f"today: {today}")
 
     if 'data' not in st.session_state:
         st.session_state.data = None
