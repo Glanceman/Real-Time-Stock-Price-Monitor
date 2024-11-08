@@ -191,7 +191,7 @@ def main() -> None:
     def update_data(ticker:str):
         global today
         if today.date() !=dt.datetime.today().date():
-            today = dt.datetime.today()
+            today = dt.datetime.now(dt.timezone.utc)
             st.rerun()
 
         latest_data = fetch_latest_data(ticker)
