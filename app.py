@@ -152,10 +152,7 @@ def main() -> None:
 
     # get the timezone
     temp_df = yf.download(tickers=ticker,period="1d",interval="1h",ignore_tz=False);
-    if temp_df.index.tz==dt.timezone.utc:
-        ticker_timezone='UTC'
-    else:
-        ticker_timezone = temp_df.index.tz.zone
+    ticker_timezone = 'UTC' if temp_df.index.tz == dt.timezone.utc else temp_df.index.tz.zone
 
 
     speed = st.select_slider(
@@ -168,14 +165,12 @@ def main() -> None:
         ],
     )
 
-    if speed =='Never':
-        st.session_state.refresh_speed = None
-    elif speed =='Slow':
-        st.session_state.refresh_speed = 60
-    elif speed =='Medium':
-        st.session_state.refresh_speed = 20
-    elif speed =='Fast':
-        st.session_state.refresh_speed = 5
+    st.session_state.refresh_speed = {
+        "Never": None,
+        "Slow": 60,
+        "Medium": 20,
+        "Fast": 5
+    }.get(speed)
 
     # Reset session state if ticker changes
     if st.session_state.last_ticker != ticker:
@@ -219,20 +214,13 @@ def main() -> None:
                 st.session_state.price_fig = create_price_figure(data, ticker)
             else:
                 with st.session_state.price_fig.batch_update():
-                    st.session_state.price_fig.data[0].close = data['Close'][:]
-                    st.session_state.price_fig.data[0].high = data['High'][:]
-                    st.session_state.price_fig.data[0].low = data['Low'][:]
-                    st.session_state.price_fig.data[0].open = data['Open'][:]
-                    st.session_state.price_fig.data[0].x = data['date'][:]
-
-                    st.session_state.price_fig.data[1].y = data['EMA10'][:]
-                    st.session_state.price_fig.data[1].x = data['date'][:]
-
-                    st.session_state.price_fig.data[2].y = data['bollh'][:]
-                    st.session_state.price_fig.data[2].x = data['date'][:]
-
-                    st.session_state.price_fig.data[3].y = data['bolll'][:]
-                    st.session_state.price_fig.data[3].x = data['date'][:]
+                    for trace_idx, column in enumerate(['Close', 'High', 'Low', 'Open']):
+                        st.session_state.price_fig.data[0][column.lower()] = data[column]
+                    st.session_state.price_fig.data[0].x = data['date']
+                    
+                    for trace_idx, column in enumerate(['EMA10', 'bollh', 'bolll']):
+                        st.session_state.price_fig.data[trace_idx + 1].y = data[column]
+                        st.session_state.price_fig.data[trace_idx + 1].x = data['date']
 
             st.plotly_chart(st.session_state.price_fig, use_container_width=True)
 
@@ -253,14 +241,11 @@ def main() -> None:
 
     @st.fragment(run_every=st.session_state.refresh_speed)
     def show_detail():
-        #show_price_chart(ticker=ticker,price_container=price_container)
-        #st.line_chart(data=data, x='date', y=['rsi'])
         st.write(f"""
         Latest Price: {st.session_state.lastet_data_indicators['Close'].iloc[-1]:.2f}
         
         Recent Data:
         """)
-        print(st.session_state.lastet_data_indicators)
         st.dataframe(st.session_state.lastet_data_indicators[-2:])
 
     update_data(ticker)
@@ -276,12 +261,8 @@ if __name__ == '__main__':
     # Initialize session state
     print(f"today: {today}")
 
-    if 'data' not in st.session_state:
-        st.session_state.data = None
-    if 'price_fig' not in st.session_state:
-        st.session_state.price_fig = None
-    if 'rsi_fig'  not in st.session_state:
-        st.session_state.rsi_fig = None
-    if 'last_ticker' not in st.session_state:
-        st.session_state.last_ticker = None
+    for state_var in ['data', 'price_fig', 'rsi_fig', 'last_ticker']:
+        if state_var not in st.session_state:
+            st.session_state[state_var] = None
+            
     main()
