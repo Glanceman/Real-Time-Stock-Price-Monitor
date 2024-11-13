@@ -2,6 +2,7 @@ import streamlit as st
 import sys
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 import ta.momentum
 import ta.trend
@@ -56,8 +57,44 @@ def calculate_indicators(data: pd.DataFrame) -> pd.DataFrame:
     boll = ta.volatility.BollingerBands(data['Close'])
     data['bollh'] = boll.bollinger_hband()
     data['bolll'] = boll.bollinger_lband()
+    macd = ta.trend.MACD(close=data['Close'])
+    data['macd'] = macd.macd()
+    data['macd_signal'] = macd.macd_signal()
+    
+    #cross
+    data['buy/sell signal']  = np.where(data['macd'] > data['macd_signal'], 1, 0)
+    data['buy/sell signal']  = np.where(data['macd'] < data['macd_signal'], -1, data['buy/sell signal'] )
+    data['buy/sell signal']= data['buy/sell signal'].diff()
+    print(data[data['buy/sell signal']==2])
     #ta.volume.on_balance_volume(data['Close'],data['Volume'])
+
     return data
+
+def create_macd_figure(data:pd.DataFrame):
+    layout = go.Layout(
+        title=f'MACD',
+        xaxis=dict(title='Date'),
+        yaxis=dict(title='Value'),
+        width=800,
+        height=400,
+        uirevision=True  # This prevents the UI from resetting
+    )
+    fig = go.Figure(layout=layout)
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['macd'],
+        mode="lines",
+        name="MACD",
+        line=dict(color='green')
+    ))
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['macd_signal'],
+        mode="lines",
+        name="MACD Signal",
+        line=dict(color='orange')
+    ))
+    return fig
 
 def create_rsi_figure(data: pd.DataFrame):
     layout = go.Layout(
@@ -129,6 +166,22 @@ def create_price_figure(data: pd.DataFrame, ticker: str):
         mode="lines",
         name="Bollinger Low",
         line=dict(color='rgba(255,0,0,0.3)')
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=data[data['buy/sell signal'] == 2]['date'],
+        y=data[data['buy/sell signal'] == 2]['Close'],
+        mode='markers',
+        marker=dict(symbol='triangle-up', color='gold', size=12),
+        name='Buy'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=data[data['buy/sell signal'] == -2]['date'],
+        y=data['Close'][data['buy/sell signal'] == -2],
+        mode='markers',
+        marker=dict(symbol='triangle-down', color='tomato', size=12),
+        name='Sell'
     ))
     
     # Add range slider
@@ -225,6 +278,23 @@ def main() -> None:
             st.plotly_chart(st.session_state.price_fig, use_container_width=True)
 
     @st.fragment(run_every=st.session_state.refresh_speed)
+    def show_macd_chart():
+
+        if 'lastet_data_indicators' in st.session_state:
+            data = st.session_state.lastet_data_indicators
+
+            if st.session_state.macd_fig == None:
+                st.session_state.macd_fig = create_macd_figure(data)
+            else:
+                with st.session_state.macd_fig.batch_update():
+                    st.session_state.macd_fig.data[0].y = data['macd'][:]
+                    st.session_state.macd_fig.data[1].y = data['macd_signal'][:]
+
+
+        st.plotly_chart(st.session_state.macd_fig, use_container_width=True)
+
+
+    @st.fragment(run_every=st.session_state.refresh_speed)
     def show_rsi_chart():
 
         if 'lastet_data_indicators' in st.session_state:
@@ -250,6 +320,7 @@ def main() -> None:
 
     update_data(ticker)
     show_price_chart(ticker)
+    show_macd_chart()
     show_rsi_chart()
     show_detail()
     print(f"refresh speed{st.session_state.refresh_speed}")
@@ -261,7 +332,7 @@ if __name__ == '__main__':
     # Initialize session state
     print(f"today: {today}")
 
-    for state_var in ['data', 'price_fig', 'rsi_fig', 'last_ticker']:
+    for state_var in ['data', 'price_fig','macd_fig','rsi_fig', 'last_ticker']:
         if state_var not in st.session_state:
             st.session_state[state_var] = None
             
