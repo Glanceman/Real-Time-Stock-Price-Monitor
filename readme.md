@@ -116,5 +116,18 @@ e.g:& \text{daily returns}(T=252) \text{ monthly returns}(T=12)\\
 \end{split}
 ```
 
+## Normal Distribution
+```math
+\begin{split}
+y &= f(x;u,\sigma) =\frac{1}{\sqrt{2\pi\sigma^{2}}}e^{-\frac{(x-u)^2}{2\sigma^2}}
+\end{split} \\
+
+\begin{split}
+   &u:\text{mean}\\
+    &\sigma:\text{standard deviation}\\
+    &\text{standard normal}: u=0; \sigma = 1 
+\end{split}
+```
+
 
 
